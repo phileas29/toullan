@@ -2,6 +2,6 @@
 
 This project aims at to reproduce the online video game "digdig.io".
 
-#contact
+# contact
 
 phileas.peron@gmail.com

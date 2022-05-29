@@ -3,6 +3,7 @@
 # https://stackoverflow.com/questions/9735172/2d-array-path-finding
 
 from collections import defaultdict
+from pickle import NONE
 import random
 import time
 import copy
@@ -24,7 +25,7 @@ class Graph():
         self.edges[from_node].append(to_node)
         self.weights[(from_node, to_node)] = weight
 
-def dijsktra(graph, initial, end):
+def dijkstra(graph, initial, end):
     # shortest paths is a dict of nodes
     # whose value is a tuple of (previous node, weight)
     shortest_paths = {initial: (None, 0)}
@@ -72,40 +73,56 @@ def tupleNeighbourgh(i,j,H,W):
     return l
 
 random.seed(time.time())
+
+TILES = {
+    "NONE" : (1,' '),
+    "ROCK" : (5,'.'),
+    "HARDROCK" : (10,'|')
+}
+
+#CONSTRUCT MAP
 W = 180
 H = 60
 map=[]
 for i in range(H):
     map.append([])
     for j in range(W):
-        map[-1].append(2)
-        # map[-1].append(random.randint(0, 5))
+        map[-1].append(TILES['ROCK'][0])
 
 startPath=[random.randint(0, H-1),random.randint(0, W-1)]
 endPath=[random.randint(0, H-1),random.randint(0, W-1)]
-# startPath=str(random.randint(0, H-1))+'-'+str(random.randint(0, W-1))
-# endPath=str(random.randint(0, H-1))+'-'+str(random.randint(0, W-1))
+sp = str(startPath[0])+'-'+str(startPath[1])
+ep = str(endPath[0])+'-'+str(endPath[1])
 
+#make some spaces around digger
 r=4
 for i in range(startPath[0]-r,startPath[0]+r+1):
     for j in range(startPath[1]-r,startPath[1]+r+1):
         if ( i - startPath[0] ) ** 2 + ( j - startPath[1] ) ** 2 <= r ** 2 :
-            map[i%H][j%W]=1
+            map[i%H][j%W]=TILES['NONE'][0]
 
+#add tunnel
+for j in range(50):
+    z=random.randint(0,r)
+    for i in range(2*r):
+        map[(startPath[0]-r+i+j+z)%H][(startPath[1]+j)%W]=TILES['NONE'][0]
+
+                
+#add holes
 for _ in range(4):
     c=[random.randint(0, H-1),random.randint(0, W-1)]
     r=random.randint(3,6)
-    n=random.randint(0,1) * 3
+    if random.randint(0,1) == 0 :
+        n= TILES['NONE'][0]
+    else:
+        n= TILES['HARDROCK'][0]
     for i in range(c[0]-r,c[0]+r+1):
         for j in range(c[1]-r,c[1]+r+1):
             if ( i - c[0] ) ** 2 + ( j - c[1] ) ** 2 <= r ** 2 :
                 map[i%H][j%W]=n
-        
-# for i in range(H):
-#     for j in range(W):
-#         print(map[i][j],end='')
-#     print()
+######################
 
+#CONSTRUCT GRAPH
 graph = Graph()
 
 edges=[]
@@ -121,22 +138,7 @@ for i in range(H):
 
 for edge in edges:
     graph.add_edge(*edge)
-
-print(startPath, endPath)
-sp = str(startPath[0])+'-'+str(startPath[1])
-ep = str(endPath[0])+'-'+str(endPath[1])
-t0=time.time()
-(path,weight) = dijsktra(graph, sp, ep)
-print(time.time()-t0)
-print(weight)
-
-for i in range(H):
-    for j in range(W):
-        if str(i)+'-'+str(j) in path :
-            print(' ',end='')
-        else:
-            print(map[i][j],end='')
-    print()
+######################
     
 map2=[]
 for i in range(H):
@@ -145,7 +147,7 @@ for i in range(H):
         map2[-1].append('X')
 
 t0=time.time()
-d = 10
+d = 20
 r=2
 g=0
 while True :
@@ -159,22 +161,29 @@ while True :
             endPath = [ startPath[0] + r - 1 , startPath[1] + r - 1 - (i%(p//4)) ]
         elif i // (p//4) == 3 :
             endPath = [ startPath[0] + r - 1 -(i%(p//4)) , startPath[1] - r + 1 ]
-        if r==2:
-            print(endPath)
         ep = str(endPath[0])+'-'+str(endPath[1])
-        res = dijsktra(graph, sp, ep)
-        # print(p,i)
-        # print(res)
-        # print(sp,ep)
+        res = dijkstra(graph, sp, ep)
         if d <= int(res[1]) :
             g+=1
         else:
-            map2[endPath[0]][endPath[1]] = str(map[endPath[0]][endPath[1]])
+            if map[endPath[0]][endPath[1]] == TILES['HARDROCK'][0] :
+                map2[endPath[0]][endPath[1]] = TILES['HARDROCK'][1]
+            elif map[endPath[0]][endPath[1]] == TILES['ROCK'][0] :
+                map2[endPath[0]][endPath[1]] = TILES['ROCK'][1]
+            elif map[endPath[0]][endPath[1]] == TILES['NONE'][0] :
+                map2[endPath[0]][endPath[1]] = TILES['NONE'][1]
     if g == p :
         break
     r+=1
     g=0
 print(time.time()-t0)
+
+
+
+for i in range(H):
+    for j in range(W):
+        print(f'{map[i][j]:x}',end='')
+    print()
 
 for i in range(H):
     for j in range(W):
